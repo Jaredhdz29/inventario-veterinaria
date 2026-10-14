@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS productos (
     cantidad INT NOT NULL DEFAULT 0 CHECK (cantidad >= 0),
     id_categoria INT NOT NULL,
     id_proveedor INT,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
 
     FOREIGN KEY (id_categoria) REFERENCES categorias(id_categoria),
     FOREIGN KEY (id_proveedor) REFERENCES proveedores(id_proveedor)
