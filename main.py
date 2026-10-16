@@ -125,8 +125,71 @@ def desactivar_producto(conexion):
     else:
         print("Operación cancelada.")
 
+def registrar_movimiento(conexion, tipo):
+    id_producto = pedir_entero("Ingresa el id del producto: ")
+    cantidad = pedir_entero("Ingresa la cantidad: ")
+    
+    if cantidad <= 0:
+        print("La cantidad debe ser mayor a cero para que el movimiento sea válido")
+        return
+    cursor = conexion.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT id, nombre, cantidad
+        FROM productos
+        WHERE id = %s AND activo = TRUE
+    """, (id_producto,))
+    producto = cursor.fetchone()
+    if producto is None:
+        print("No existe un producto activo con ese id.")
+        cursor.close()
+        return
+    if tipo == "salida" and cantidad > producto["cantidad"]:
+        print(f"No hay suficiente stock. Disponible: {producto['cantidad']} unidades.")
+        cursor.close()
+        return
+    
+    if tipo == "entrada":
+        cambio = cantidad
+    else:
+        cambio = -cantidad
+    
+    try:
+        cursor.execute("""
+            INSERT INTO movimientos (id_producto, tipo, cantidad)
+            VALUES (%s, %s, %s)
+        """, (id_producto, tipo, cantidad))
+
+        cursor.execute("""
+            UPDATE productos
+            SET cantidad = cantidad + %s
+            WHERE id = %s
+        """, (cambio, id_producto))
+        conexion.commit()
+        print(f"Movimiento registrado. Stock actual: {producto['cantidad'] + cambio} unidades.")
+    except mysql.connector.Error as e:
+        conexion.rollback()
+        print(f"No se registró el movimiento: {e}")
+
+    cursor.close()
 
 
+def ver_movimientos(conexion):
+    cursor = conexion.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT m.fecha, p.nombre, m.tipo, m.cantidad
+        FROM movimientos AS m
+        INNER JOIN productos AS p ON m.id_producto = p.id
+        ORDER BY m.fecha DESC, m.id_movimiento DESC
+    """)
+    movimientos = cursor.fetchall()
+
+    if not movimientos:
+        print("No se encontraron movimientos")
+    else:
+        for movimiento in movimientos:
+            print(f'{movimiento["fecha"]:%Y-%m-%d %H:%M} | {movimiento["nombre"]} | {movimiento["tipo"]} | {movimiento["cantidad"]} unidades')
+    
+    cursor.close()
 
 def main():
     try:
@@ -140,7 +203,10 @@ def main():
             print("3. Buscar producto")
             print("4. Editar producto")
             print("5. Desactivar producto")
-            print("6. Salir")
+            print("6. Registrar entrada")
+            print("7. Registrar salida")
+            print("8. Ver movimientos")
+            print("9. Salir")
             opcion = input("Ingresa la opción que deseas elegir: ").strip()
 
             if opcion == "1":
@@ -154,11 +220,17 @@ def main():
             elif opcion == "5":
                 desactivar_producto(conexion)
             elif opcion == "6":
+                registrar_movimiento(conexion, "entrada")
+            elif opcion == "7":
+                registrar_movimiento(conexion, "salida")
+            elif opcion == "8":
+                ver_movimientos(conexion)
+            elif opcion == "9":
                 conexion.close()
                 print("¡Hasta luego!")
                 break
             else:
-                print("Ingresaste una opción no válida, ingresa un número del 1 - 6")
+                print("Ingresaste una opción no válida, ingresa un número del 1 - 9")
 
     except mysql.connector.Error as e:
         print(f"Error de MySQL: {e}")
