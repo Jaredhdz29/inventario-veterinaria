@@ -1,2 +1,4 @@
 config.py
 __pycache__/
+
+stock_bajo_*.csv

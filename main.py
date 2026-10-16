@@ -1,5 +1,11 @@
+import csv
+from datetime import date
+
 import mysql.connector
+
 from config import DB_CONFIG
+
+STOCK_MINIMO = 5
 
 
 def pedir_numero(mensaje):
@@ -125,10 +131,11 @@ def desactivar_producto(conexion):
     else:
         print("Operación cancelada.")
 
+
 def registrar_movimiento(conexion, tipo):
     id_producto = pedir_entero("Ingresa el id del producto: ")
     cantidad = pedir_entero("Ingresa la cantidad: ")
-    
+
     if cantidad <= 0:
         print("La cantidad debe ser mayor a cero para que el movimiento sea válido")
         return
@@ -147,12 +154,12 @@ def registrar_movimiento(conexion, tipo):
         print(f"No hay suficiente stock. Disponible: {producto['cantidad']} unidades.")
         cursor.close()
         return
-    
+
     if tipo == "entrada":
         cambio = cantidad
     else:
         cambio = -cantidad
-    
+
     try:
         cursor.execute("""
             INSERT INTO movimientos (id_producto, tipo, cantidad)
@@ -188,8 +195,47 @@ def ver_movimientos(conexion):
     else:
         for movimiento in movimientos:
             print(f'{movimiento["fecha"]:%Y-%m-%d %H:%M} | {movimiento["nombre"]} | {movimiento["tipo"]} | {movimiento["cantidad"]} unidades')
-    
+
     cursor.close()
+
+
+def exportar_stock_bajo(productos):
+    nombre_archivo = f"stock_bajo_{date.today()}.csv"
+
+    try:
+        with open(nombre_archivo, "w", newline="", encoding="utf-8-sig") as archivo:
+            escritor = csv.DictWriter(archivo, fieldnames=["id", "nombre", "marca", "categoria", "cantidad"])
+            escritor.writeheader()
+            escritor.writerows(productos)
+            print(f"Reporte exportado: {nombre_archivo}")
+    except OSError:
+        print("No se pudo crear el archivo. Si está abierto en Excel, ciérralo e intenta de nuevo.")
+
+
+def reporte_stock_bajo(conexion):
+    cursor = conexion.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT p.id, p.nombre, p.marca, c.nombre AS categoria, p.cantidad
+        FROM productos AS p
+        INNER JOIN categorias AS c ON p.id_categoria = c.id_categoria
+        WHERE p.cantidad < %s AND p.activo = TRUE
+        ORDER BY p.cantidad ASC
+    """, (STOCK_MINIMO,))
+    productos = cursor.fetchall()
+    cursor.close()
+
+    if not productos:
+        print("Todo el inventario tiene stock suficiente.")
+        return
+
+    print(f"\nProductos con menos de {STOCK_MINIMO} unidades:")
+    for producto in productos:
+        print(f'{producto["id"]} | {producto["nombre"]} | {producto["marca"]} | {producto["categoria"]} | {producto["cantidad"]} unidades')
+
+    respuesta = input("¿Exportar a CSV? (s/n): ").strip().lower()
+    if respuesta == "s":
+        exportar_stock_bajo(productos)
+
 
 def main():
     try:
@@ -206,7 +252,8 @@ def main():
             print("6. Registrar entrada")
             print("7. Registrar salida")
             print("8. Ver movimientos")
-            print("9. Salir")
+            print("9. Reporte de stock bajo")
+            print("10. Salir")
             opcion = input("Ingresa la opción que deseas elegir: ").strip()
 
             if opcion == "1":
@@ -226,11 +273,13 @@ def main():
             elif opcion == "8":
                 ver_movimientos(conexion)
             elif opcion == "9":
+                reporte_stock_bajo(conexion)
+            elif opcion == "10":
                 conexion.close()
                 print("¡Hasta luego!")
                 break
             else:
-                print("Ingresaste una opción no válida, ingresa un número del 1 - 9")
+                print("Ingresaste una opción no válida, ingresa un número del 1 - 10")
 
     except mysql.connector.Error as e:
         print(f"Error de MySQL: {e}")
