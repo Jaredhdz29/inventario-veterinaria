@@ -14,7 +14,7 @@ def pedir_numero(mensaje):
             numero = float(input(mensaje))
             return numero
         except ValueError:
-            print("Ingresa un número válido por favor")
+            print("Ingresa un número válido por favor.")
 
 
 def pedir_entero(mensaje):
@@ -23,7 +23,7 @@ def pedir_entero(mensaje):
             numero_entero = int(input(mensaje))
             return numero_entero
         except ValueError:
-            print("Ingresa un número entero válido por favor")
+            print("Ingresa un número entero válido por favor.")
 
 
 def mostrar_inventario(conexion):
@@ -124,7 +124,7 @@ def desactivar_producto(conexion):
         conexion.commit()
 
         if cursor.rowcount == 0:
-            print("No se desactivó: el id no existe o está desactivado")
+            print("No se desactivó: el id no existe o está desactivado.")
         else:
             print("Producto desactivado.")
         cursor.close()
@@ -137,8 +137,9 @@ def registrar_movimiento(conexion, tipo):
     cantidad = pedir_entero("Ingresa la cantidad: ")
 
     if cantidad <= 0:
-        print("La cantidad debe ser mayor a cero para que el movimiento sea válido")
+        print("La cantidad debe ser mayor a cero para que el movimiento sea válido.")
         return
+
     cursor = conexion.cursor(dictionary=True)
     cursor.execute("""
         SELECT id, nombre, cantidad
@@ -146,10 +147,12 @@ def registrar_movimiento(conexion, tipo):
         WHERE id = %s AND activo = TRUE
     """, (id_producto,))
     producto = cursor.fetchone()
+
     if producto is None:
         print("No existe un producto activo con ese id.")
         cursor.close()
         return
+
     if tipo == "salida" and cantidad > producto["cantidad"]:
         print(f"No hay suficiente stock. Disponible: {producto['cantidad']} unidades.")
         cursor.close()
@@ -171,6 +174,7 @@ def registrar_movimiento(conexion, tipo):
             SET cantidad = cantidad + %s
             WHERE id = %s
         """, (cambio, id_producto))
+
         conexion.commit()
         print(f"Movimiento registrado. Stock actual: {producto['cantidad'] + cambio} unidades.")
     except mysql.connector.Error as e:
@@ -191,7 +195,7 @@ def ver_movimientos(conexion):
     movimientos = cursor.fetchall()
 
     if not movimientos:
-        print("No se encontraron movimientos")
+        print("No se encontraron movimientos.")
     else:
         for movimiento in movimientos:
             print(f'{movimiento["fecha"]:%Y-%m-%d %H:%M} | {movimiento["nombre"]} | {movimiento["tipo"]} | {movimiento["cantidad"]} unidades')
@@ -240,7 +244,7 @@ def reporte_stock_bajo(conexion):
 def main():
     try:
         conexion = mysql.connector.connect(**DB_CONFIG)
-        print("Conexión exitosa a la base de datos veterinaria")
+        print("Conexión exitosa a la base de datos veterinaria.")
 
         while True:
             print("\n--- Inventario Veterinaria ---")
@@ -279,10 +283,11 @@ def main():
                 print("¡Hasta luego!")
                 break
             else:
-                print("Ingresaste una opción no válida, ingresa un número del 1 - 10")
+                print("Ingresaste una opción no válida, ingresa un número del 1 - 10.")
 
     except mysql.connector.Error as e:
         print(f"Error de MySQL: {e}")
 
 
-main()
+if __name__ == "__main__":
+    main()
