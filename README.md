@@ -10,12 +10,14 @@ Sistema de inventario en consola para una veterinaria, hecho con **Python** y **
 - Validación de stock: no permite salidas mayores a lo disponible.
 - Historial de movimientos con fecha y nombre del producto.
 - Reporte de productos con menos de 5 unidades, exportable a CSV para abrirlo en Excel.
+- Gráfica de barras del stock por producto, con los productos bajo el mínimo en rojo.
 
 ## Tecnologías
 
 - Python 3.10 o superior
 - MySQL 8.0 o superior
 - [mysql-connector-python](https://dev.mysql.com/doc/connector-python/en/)
+- [matplotlib](https://matplotlib.org/)
 
 ## Estructura del proyecto
 

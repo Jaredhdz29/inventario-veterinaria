@@ -2,6 +2,7 @@ import csv
 from datetime import date
 
 import mysql.connector
+import matplotlib.pyplot as plt
 
 from config import DB_CONFIG
 
@@ -240,6 +241,47 @@ def reporte_stock_bajo(conexion):
     if respuesta == "s":
         exportar_stock_bajo(productos)
 
+def graficar_stock(conexion):
+    cursor = conexion.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT nombre, cantidad
+        FROM productos
+        WHERE activo = TRUE
+        ORDER BY cantidad DESC
+    """)
+    productos = cursor.fetchall()
+    cursor.close()
+
+    if not productos:
+        print("No se encontraron productos.")
+        return
+
+    nombres = []
+    cantidades = []
+    colores = []
+
+    for producto in productos:
+        nombres.append(producto["nombre"])
+        cantidades.append(producto["cantidad"])
+
+        if producto["cantidad"] < STOCK_MINIMO:
+            colores.append("red")
+        else:
+            colores.append("steelblue")
+
+    plt.barh(nombres, cantidades, color=colores)
+    plt.axvline(STOCK_MINIMO, color="gray", linestyle="--",
+                label=f"Mínimo ({STOCK_MINIMO})")
+    plt.legend()
+    plt.title("Stock por producto")
+    plt.xlabel("Unidades")
+    plt.tight_layout()
+
+    nombre_archivo = f"grafica_stock_{date.today()}.png"
+    plt.savefig(nombre_archivo)
+    print(f"Gráfica guardada: {nombre_archivo}")
+    plt.show()
+    plt.close()
 
 def main():
     try:
@@ -257,7 +299,8 @@ def main():
             print("7. Registrar salida")
             print("8. Ver movimientos")
             print("9. Reporte de stock bajo")
-            print("10. Salir")
+            print("10. Gráfica de stock")
+            print("11. Salir")
             opcion = input("Ingresa la opción que deseas elegir: ").strip()
 
             if opcion == "1":
@@ -279,11 +322,13 @@ def main():
             elif opcion == "9":
                 reporte_stock_bajo(conexion)
             elif opcion == "10":
+                graficar_stock(conexion)
+            elif opcion == "11":
                 conexion.close()
                 print("¡Hasta luego!")
                 break
             else:
-                print("Ingresaste una opción no válida, ingresa un número del 1 - 10.")
+                print("Ingresaste una opción no válida, ingresa un número del 1 - 11.")
 
     except mysql.connector.Error as e:
         print(f"Error de MySQL: {e}")
